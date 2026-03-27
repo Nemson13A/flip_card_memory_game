@@ -812,7 +812,7 @@
       const difficultyConfig = {
         easy: { cols: 3, rows: 4, label: "Easy" },
         medium: { cols: 4, rows: 5, label: "Medium" },
-        hard: { cols: 6, rows: 6, label: "Hard" },
+        hard: { cols: 5, rows: 8, label: "Hard" },
       };
 
       const { cols, rows, label: difficultyLabel } = difficultyConfig[difficulty];
@@ -822,24 +822,27 @@
           title: "Animals",
           emoji: "🐾",
           accents: [
-            "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨",
-            "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦"
+            "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯",
+            "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦", "🦆", "🦉",
+            "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🪱", "🐛", "🦋", "🐌"
           ],
         },
         fruits: {
           title: "Fruits",
           emoji: "🍎",
           accents: [
-            "🍎", "🍊", "🍋", "🍌", "🍉", "🍓", "🍒", "🍑", "🍍",
-            "🥥", "🥝", "🍇", "🍐", "🍏", "🍈", "🫐", "🥭", "🍅"
+            "🍎", "🍊", "🍋", "🍌", "🍉", "🍓", "🍒", "🍑", "🍍", "🥥",
+            "🥝", "🍇", "🍐", "🍏", "🍈", "🫐", "🥭", "🍅", "🥦", "🌽",
+            "🥕", "🫑", "🧅", "🧄", "🫒", "🍆", "🥔", "🥜", "🌰", "🍞"
           ],
         },
         space: {
           title: "Space",
           emoji: "🚀",
           accents: [
-            "🚀", "🛸", "🪐", "🌙", "⭐️", "🌠", "🌍", "🌕", "🌑",
-            "☄️", "🌌", "🔭", "👽", "👨‍🚀", "👩‍🚀", "🛰️", "🌟", "☀️"
+            "🚀", "🛸", "🪐", "🌙", "⭐️", "🌠", "🌍", "🌕", "🌑", "☄️",
+            "🌌", "🔭", "👽", "👨‍🚀", "👩‍🚀", "🛰️", "🌟", "☀️", "🔭", "👽",
+            "🛸", "🪐", "🛰️", "🛸", "👾", "🤖", "🤖", "👾", "👽", "🛸"
           ],
         },
       };
@@ -873,14 +876,18 @@
           // Medium (4x5)
           cardSize = "95px";
           emojiSize = "2.8rem";
+        } else if (totalCards === 40) {
+          // Hard (5x8)
+          cardSize = "max(45px, 10vw)"; // 手机上自动缩放，确保不超出
+          emojiSize = "1.5rem";
         } else {
-          // Hard (6x6)
+          // Other fallback
           cardSize = "75px";
           emojiSize = "2rem";
         }
 
         if (totalCards > 12) {
-          grid.style.setProperty('gap', '10px', 'important');
+          grid.style.setProperty('gap', totalCards >= 40 ? '6px' : '10px', 'important');
         }
         
         grid.style.setProperty("--card-size", cardSize);
