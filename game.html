@@ -126,13 +126,14 @@
       }
 
       .grid {
-        display: grid;
-        grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
-        gap: clamp(10px, 1.5vw, 16px);
-        padding: 6px;
-        margin: 0 auto;
-        /* Help it fit vertically by limiting container width if columns are many */
-        width: min(100%, calc(var(--cols) * 15vh)); 
+        display: grid !important;
+        /* Default fallback, will be overridden by JS */
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: clamp(8px, 1.2vw, 14px) !important;
+        padding: 6px !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        max-width: 640px !important;
       }
 
       .card {
@@ -148,8 +149,8 @@
         overflow: hidden;
         background: transparent;
         perspective: 900px;
-        /* Responsive card scaling */
-        max-width: 120px;
+        /* Responsive card scaling - slightly smaller to fit 4x5/6x6 */
+        max-width: 100px;
       }
 
       .card-flip {
@@ -809,8 +810,8 @@
       const difficulty = ["easy", "medium", "hard"].includes(difficultyRaw) ? difficultyRaw : "easy";
 
       const difficultyConfig = {
-        easy: { cols: 3, rows: 4, label: "Easy" },
-        medium: { cols: 4, rows: 5, label: "Medium" },
+        easy: { cols: 4, rows: 3, label: "Easy" },
+        medium: { cols: 5, rows: 4, label: "Medium" },
         hard: { cols: 6, rows: 6, label: "Hard" },
       };
 
@@ -821,53 +822,24 @@
           title: "Animals",
           emoji: "🐾",
           accents: [
-            "🐶",
-            "🐱",
-            "🦊",
-            "🐸",
-            "🦁",
-            "🐵",
-            "🐧",
-            "🦉",
-            "🐯",
-            "🐷",
-            "🐰",
-            "🐮",
-            "🐻",
-            "🦒",
-            "🐘",
-            "🐙",
-            "🦈",
-            "🐬",
+            "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨",
+            "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦"
           ],
         },
         fruits: {
           title: "Fruits",
           emoji: "🍎",
-          accents: ["🍎", "🍊", "🍋", "🍌", "🍉", "🍓"],
+          accents: [
+            "🍎", "🍊", "🍋", "🍌", "🍉", "🍓", "🍒", "🍑", "🍍",
+            "🥥", "🥝", "🍇", "🍐", "🍏", "🍈", "🫐", "🥭", "🍅"
+          ],
         },
         space: {
           title: "Space",
           emoji: "🚀",
           accents: [
-            "🚀",
-            "🛸",
-            "🪐",
-            "🌙",
-            "⭐️",
-            "🌠",
-            "🌍",
-            "🌕",
-            "🌑",
-            "☄️",
-            "🌌",
-            "🔭",
-            "👽",
-            "👨‍🚀",
-            "👩‍🚀",
-            "👨‍🚀",
-            "🛰️",
-            "🌟",
+            "🚀", "🛸", "🪐", "🌙", "⭐️", "🌠", "🌍", "🌕", "🌑",
+            "☄️", "🌌", "🔭", "👽", "👨‍🚀", "👩‍🚀", "🛰️", "🌟", "☀️"
           ],
         },
       };
@@ -880,11 +852,18 @@
       document.getElementById("topic-badge-emoji").textContent = cfg.emoji;
       document.getElementById("topic-badge-sub").textContent = `${cols}x${rows} grid ready`;
 
-      const modalTextEl = document.getElementById("modalText");
-
-      // Create a difficulty-based grid. Each selected icon repeats as a pair.
+      // Setup grid layout based on difficulty
       const grid = document.getElementById("grid");
-      grid.style.setProperty("--cols", String(cols));
+      
+      function updateGridStyle(columns) {
+        if (!grid) return;
+        // Direct style manipulation with !important
+        grid.style.setProperty('grid-template-columns', `repeat(${columns}, 1fr)`, 'important');
+      }
+
+      updateGridStyle(cols);
+
+      const modalTextEl = document.getElementById("modalText");
 
       const totalCards = cols * rows;
       const requiredPairs = totalCards / 2;
