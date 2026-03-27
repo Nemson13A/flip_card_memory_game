@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flip Card Memory Game</title>
+    <style>
+      :root {
+        --bg1: #fff2a8;
+        --bg2: #b9f3ff;
+        --card-radius: 28px;
+        --shadow: 0 14px 30px rgba(16, 24, 40, 0.14);
+        --shadow-hover: 0 18px 42px rgba(16, 24, 40, 0.22);
+        --focus: rgba(59, 130, 246, 0.35);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Comic Sans MS", "Trebuchet MS", "Noto Sans SC", system-ui, -apple-system, Segoe UI,
+          Roboto, Helvetica, Arial, sans-serif;
+        color: #1f2937;
+        background:
+          radial-gradient(900px 500px at 20% 15%, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0) 60%),
+          radial-gradient(700px 480px at 80% 25%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 60%),
+          linear-gradient(160deg, var(--bg1), var(--bg2));
+        overflow-x: hidden;
+      }
+
+      .wrap {
+        width: min(980px, 92vw);
+        margin: 0 auto;
+        padding: 28px 0 44px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+
+      header {
+        text-align: center;
+        padding: 12px 0 2px;
+      }
+
+      .title {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 3.2rem);
+        letter-spacing: 0.2px;
+        font-weight: 900;
+        line-height: 1.05;
+        text-shadow: 0 6px 0 rgba(255, 255, 255, 0.4), 0 10px 30px rgba(31, 41, 55, 0.12);
+      }
+
+      .subtitle {
+        margin: 10px auto 0;
+        max-width: 44ch;
+        font-size: clamp(1rem, 2.4vw, 1.25rem);
+        font-weight: 700;
+        opacity: 0.9;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: clamp(12px, 2.2vw, 20px);
+        padding-top: 10px;
+      }
+
+      @media (max-width: 780px) {
+        .cards {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .topic-card {
+        appearance: none;
+        border: 0;
+        cursor: pointer;
+        padding: 22px 18px;
+        border-radius: var(--card-radius);
+        box-shadow: var(--shadow);
+        transform: translateY(0) scale(1);
+        transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+        position: relative;
+        overflow: hidden;
+        min-height: 142px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+
+      .topic-card::before {
+        content: "";
+        position: absolute;
+        inset: -80px -80px auto -80px;
+        height: 220px;
+        background: rgba(255, 255, 255, 0.22);
+        transform: rotate(10deg);
+        filter: blur(0px);
+      }
+
+      .topic-card:hover {
+        transform: translateY(-4px) scale(1.03);
+        box-shadow: var(--shadow-hover);
+        filter: saturate(1.07);
+      }
+
+      .topic-card:active {
+        transform: translateY(-1px) scale(0.99);
+      }
+
+      .topic-card:focus-visible {
+        outline: 4px solid var(--focus);
+        outline-offset: 4px;
+      }
+
+      .card-inner {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .emoji {
+        width: 62px;
+        height: 62px;
+        border-radius: 22px;
+        display: grid;
+        place-items: center;
+        font-size: 34px;
+        background: rgba(255, 255, 255, 0.28);
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.09);
+      }
+
+      .label {
+        font-size: clamp(1.25rem, 2.5vw, 1.6rem);
+        font-weight: 950;
+        letter-spacing: 0.2px;
+      }
+
+      .hint {
+        font-size: 0.95rem;
+        font-weight: 800;
+        opacity: 0.9;
+      }
+
+      .card-animals {
+        background: linear-gradient(135deg, #fda4af, #60a5fa);
+      }
+      .card-fruits {
+        background: linear-gradient(135deg, #fbbf24, #34d399);
+      }
+      .card-space {
+        background: linear-gradient(135deg, #a78bfa, #38bdf8);
+      }
+
+      .card-diff-easy {
+        background: linear-gradient(135deg, #60a5fa, #34d399);
+      }
+      .card-diff-medium {
+        background: linear-gradient(135deg, #fbbf24, #60a5fa);
+      }
+      .card-diff-hard {
+        background: linear-gradient(135deg, #fb7185, #a78bfa);
+      }
+
+      .step {
+        transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out, visibility 0.3s;
+      }
+
+      .step.hidden {
+        opacity: 0;
+        transform: translateY(1rem);
+        visibility: hidden;
+        position: absolute;
+        pointer-events: none;
+        width: min(980px, 92vw);
+      }
+
+      .back-btn {
+        appearance: none;
+        border: none;
+        background: rgba(255, 255, 255, 0.4);
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: 800;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1rem;
+        color: #4b5563;
+        transition: all 0.2s ease;
+        align-self: flex-start;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      }
+
+      .back-btn:hover {
+        background: rgba(255, 255, 255, 0.6);
+        transform: translateX(-4px);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+      }
+
+      .back-btn:active {
+        transform: translateX(-2px) scale(0.98);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <header>
+        <h1 class="title">Flip Card Memory Game</h1>
+        <p class="subtitle">Choose your topic to start playing.</p>
+      </header>
+
+      <div id="topics" class="step">
+        <section class="cards" aria-label="Topic choices">
+          <button
+            class="topic-card card-animals"
+            type="button"
+            data-topic="animals"
+            aria-label="Animals topic"
+          >
+            <div class="card-inner">
+              <div class="emoji" aria-hidden="true">🐾</div>
+              <div class="label">Animals</div>
+              <div class="hint">Click to play</div>
+            </div>
+          </button>
+
+          <button
+            class="topic-card card-fruits"
+            type="button"
+            data-topic="fruits"
+            aria-label="Fruits topic"
+          >
+            <div class="card-inner">
+              <div class="emoji" aria-hidden="true">🍎</div>
+              <div class="label">Fruits</div>
+              <div class="hint">Click to play</div>
+            </div>
+          </button>
+
+          <button
+            class="topic-card card-space"
+            type="button"
+            data-topic="space"
+            aria-label="Space topic"
+          >
+            <div class="card-inner">
+              <div class="emoji" aria-hidden="true">🚀</div>
+              <div class="label">Space</div>
+              <div class="hint">Click to play</div>
+            </div>
+          </button>
+        </section>
+      </div>
+
+      <div id="difficulty" class="step hidden">
+        <button id="back-to-topics" class="back-btn" type="button">
+          <span>⬅️</span> Back
+        </button>
+        <section class="cards" aria-label="Difficulty choices" style="padding-top: 0;">
+          <button
+            class="topic-card card-diff-easy"
+            type="button"
+            data-difficulty="easy"
+            aria-label="Easy difficulty 3x4 grid"
+          >
+            <div class="card-inner">
+              <div class="emoji" aria-hidden="true">🙂</div>
+              <div class="label">Easy</div>
+              <div class="hint">3x4</div>
+            </div>
+          </button>
+
+          <button
+            class="topic-card card-diff-medium"
+            type="button"
+            data-difficulty="medium"
+            aria-label="Medium difficulty 4x5 grid"
+          >
+            <div class="card-inner">
+              <div class="emoji" aria-hidden="true">🤩</div>
+              <div class="label">Medium</div>
+              <div class="hint">4x5</div>
+            </div>
+          </button>
+
+          <button
+            class="topic-card card-diff-hard"
+            type="button"
+            data-difficulty="hard"
+            aria-label="Hard difficulty 6x6 grid"
+          >
+            <div class="card-inner">
+              <div class="emoji" aria-hidden="true">😈</div>
+              <div class="label">Hard</div>
+              <div class="hint">6x6</div>
+            </div>
+          </button>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const topicsContainer = document.getElementById("topics");
+      const difficultyContainer = document.getElementById("difficulty");
+      const backBtn = document.getElementById("back-to-topics");
+      const subtitle = document.querySelector(".subtitle");
+
+      let selectedTopic = "";
+
+      document.querySelectorAll("[data-topic]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedTopic = btn.getAttribute("data-topic");
+          topicsContainer.classList.add("hidden");
+          difficultyContainer.classList.remove("hidden");
+          subtitle.textContent = "Now, choose the difficulty.";
+        });
+      });
+
+      backBtn.addEventListener("click", () => {
+        difficultyContainer.classList.add("hidden");
+        topicsContainer.classList.remove("hidden");
+        subtitle.textContent = "Choose your topic to start playing.";
+      });
+
+      document.querySelectorAll("[data-difficulty]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const selectedDifficulty = btn.getAttribute("data-difficulty");
+          if (selectedTopic && selectedDifficulty) {
+            window.location.href = `game.html?topic=${encodeURIComponent(selectedTopic)}&difficulty=${encodeURIComponent(selectedDifficulty)}`;
+          }
+        });
+      });
+
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js').then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          }, err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

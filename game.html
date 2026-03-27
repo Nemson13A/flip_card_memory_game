@@ -1,0 +1,1466 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flip Card Memory Game</title>
+    <style>
+      :root {
+        --bg1: #fff2a8;
+        --bg2: #b9f3ff;
+        --card-radius: 24px;
+        --shadow: 0 14px 30px rgba(16, 24, 40, 0.14);
+        --shadow-hover: 0 18px 42px rgba(16, 24, 40, 0.22);
+        --focus: rgba(59, 130, 246, 0.35);
+        --text: #0f172a;
+        --muted: rgba(15, 23, 42, 0.72);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Comic Sans MS", "Trebuchet MS", "Noto Sans SC", system-ui, -apple-system, Segoe UI,
+          Roboto, Helvetica, Arial, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(900px 500px at 20% 15%, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0) 60%),
+          radial-gradient(700px 480px at 80% 25%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 60%),
+          linear-gradient(160deg, var(--bg1), var(--bg2));
+        overflow-x: hidden;
+      }
+
+      .wrap {
+        width: min(1100px, 94vw);
+        margin: 0 auto;
+        padding: 18px 0 44px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 6px 0 4px;
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .title {
+        margin: 0;
+        font-size: clamp(1.7rem, 3.6vw, 2.3rem);
+        font-weight: 950;
+        letter-spacing: 0.2px;
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0;
+        font-size: clamp(0.95rem, 2.2vw, 1.15rem);
+        font-weight: 800;
+        color: var(--muted);
+      }
+
+      .back {
+        appearance: none;
+        border: 0;
+        cursor: pointer;
+        padding: 12px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.55);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+        font-weight: 900;
+        transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+      }
+
+      .back:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.1);
+        filter: saturate(1.06);
+      }
+
+      .back:active {
+        transform: translateY(-1px) scale(0.98);
+      }
+
+      .back:focus-visible {
+        outline: 4px solid var(--focus);
+        outline-offset: 4px;
+      }
+
+      .stage {
+        background: rgba(255, 255, 255, 0.42);
+        border-radius: 26px;
+        box-shadow: var(--shadow);
+        padding: clamp(14px, 2.2vw, 22px);
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* subtle texture overlay */
+      .stage::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 15% 10%, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0) 40%),
+          radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 42%),
+          repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.12) 0 10px, rgba(255, 255, 255, 0) 10px 20px);
+        pointer-events: none;
+      }
+
+      .stage-inner {
+        position: relative;
+        z-index: 1;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+        gap: clamp(10px, 1.5vw, 16px);
+        padding: 6px;
+        margin: 0 auto;
+        /* Help it fit vertically by limiting container width if columns are many */
+        width: min(100%, calc(var(--cols) * 15vh)); 
+      }
+
+      .card {
+        appearance: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        border-radius: var(--card-radius);
+        position: relative;
+        box-shadow: 0 14px 26px rgba(15, 23, 42, 0.12);
+        overflow: hidden;
+        background: transparent;
+        perspective: 900px;
+        /* Responsive card scaling */
+        max-width: 120px;
+      }
+
+      .card-flip {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        transform-style: preserve-3d;
+        transition: transform 460ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        border-radius: inherit;
+      }
+
+      .card.is-flipped .card-flip {
+        transform: rotateY(180deg);
+      }
+
+      .card-face {
+        position: absolute;
+        inset: 0;
+        backface-visibility: hidden;
+        border-radius: inherit;
+        overflow: hidden;
+      }
+
+      .card-back {
+        background:
+          radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 55%),
+          linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.06));
+      }
+
+      .card-back::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          repeating-radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.18) 0 3px, rgba(255, 255, 255, 0) 4px 10px),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.06));
+        opacity: 0.9;
+      }
+
+      .card-back-mark {
+        position: relative;
+        z-index: 1;
+        width: 78%;
+        height: 78%;
+        margin: 0 auto;
+        border-radius: 22px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.22);
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        font-size: clamp(1.3rem, 4vw, 2.1rem);
+        box-shadow: 0 14px 26px rgba(0, 0, 0, 0.05);
+      }
+
+      .card-front {
+        background: rgba(255, 255, 255, 0.08);
+        transform: rotateY(180deg);
+        display: grid;
+        place-items: center;
+        padding: 10px;
+      }
+
+      .card-emoji {
+        width: 72%;
+        height: 72%;
+        border-radius: 22px;
+        display: grid;
+        place-items: center;
+        font-size: clamp(1.8rem, 4vw, 2.8rem);
+        background: rgba(255, 255, 255, 0.35);
+        box-shadow: 0 14px 26px rgba(0, 0, 0, 0.07);
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        transform: translateZ(0);
+        transition: transform 180ms ease, filter 180ms ease;
+        position: relative; /* required for ::after absolute positioning */
+      }
+
+      /* Topic accent via CSS variables */
+      .topic-animals {
+        --accentA: #fda4af;
+        --accentB: #60a5fa;
+      }
+      .topic-fruits {
+        --accentA: #fbbf24;
+        --accentB: #34d399;
+      }
+      .topic-space {
+        --accentA: #a78bfa;
+        --accentB: #38bdf8;
+      }
+
+      .topic-animals .card-back {
+        background:
+          radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 55%),
+          linear-gradient(135deg, rgba(253, 164, 175, 0.55), rgba(96, 165, 250, 0.3));
+      }
+      .topic-fruits .card-back {
+        background:
+          radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 55%),
+          linear-gradient(135deg, rgba(251, 191, 36, 0.55), rgba(52, 211, 153, 0.3));
+      }
+      .topic-space .card-back {
+        background:
+          radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 55%),
+          linear-gradient(135deg, rgba(167, 139, 250, 0.55), rgba(56, 189, 248, 0.3));
+      }
+
+      .grid.is-locked {
+        pointer-events: none;
+      }
+
+      /* Fun Fact modal */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: rgba(15, 23, 42, 0.22);
+        backdrop-filter: blur(6px);
+        z-index: 1000;
+      }
+
+      .modal-overlay.is-open {
+        display: flex;
+      }
+
+      .modal {
+        width: min(560px, 92vw);
+        border-radius: 26px;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: 0 22px 70px rgba(15, 23, 42, 0.25);
+        border: 2px solid rgba(255, 255, 255, 0.55);
+        padding: 18px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .modal::before {
+        content: "";
+        position: absolute;
+        inset: -120px -120px auto -120px;
+        height: 220px;
+        background:
+          radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 55%),
+          linear-gradient(135deg, var(--bg1), var(--bg2));
+        opacity: 0.35;
+        transform: rotate(8deg);
+        pointer-events: none;
+      }
+
+      .modal-inner {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+        align-items: center;
+      }
+
+      .modal-title {
+        margin: 0;
+        font-size: clamp(1.4rem, 3.5vw, 2rem);
+        font-weight: 1000;
+        letter-spacing: 0.2px;
+      }
+
+      .modal-body {
+        margin: 0;
+        color: rgba(15, 23, 42, 0.78);
+        font-weight: 850;
+        font-size: clamp(1rem, 2.4vw, 1.1rem);
+        max-width: 48ch;
+      }
+
+      .modal-ok {
+        appearance: none;
+        border: 0;
+        cursor: pointer;
+        padding: 14px 22px;
+        border-radius: 999px;
+        font-weight: 1000;
+        font-size: 1.15rem;
+        background: linear-gradient(135deg, #60a5fa, #a78bfa);
+        color: #fff;
+        box-shadow: 0 16px 40px rgba(99, 102, 241, 0.25);
+        transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+      }
+
+      .modal-ok:hover {
+        transform: translateY(-2px);
+        filter: saturate(1.08);
+        box-shadow: 0 20px 52px rgba(99, 102, 241, 0.32);
+      }
+
+      .modal-ok:active {
+        transform: translateY(-1px) scale(0.99);
+      }
+
+      .modal-ok:focus-visible {
+        outline: 4px solid var(--focus);
+        outline-offset: 4px;
+      }
+
+      /* Win modal is the same overlay style, but different inner spacing */
+      .win-modal-overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: rgba(15, 23, 42, 0.22);
+        backdrop-filter: blur(6px);
+        z-index: 1001;
+      }
+
+      .win-modal-overlay.is-open {
+        display: flex;
+      }
+
+      .win-modal {
+        width: min(640px, 94vw);
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: 0 24px 90px rgba(15, 23, 42, 0.28);
+        border: 2px solid rgba(255, 255, 255, 0.62);
+        padding: 22px 18px 18px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .win-modal::before {
+        content: "";
+        position: absolute;
+        inset: -140px -140px auto -140px;
+        height: 280px;
+        background: linear-gradient(135deg, var(--bg1), var(--bg2));
+        opacity: 0.45;
+        transform: rotate(8deg);
+        pointer-events: none;
+      }
+
+      .win-inner {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 14px;
+      }
+
+      .win-title {
+        margin: 0;
+        font-size: clamp(1.7rem, 4.2vw, 2.6rem);
+        font-weight: 1100;
+      }
+
+      .win-sub {
+        margin: 0;
+        color: rgba(15, 23, 42, 0.78);
+        font-weight: 850;
+      }
+
+      .win-actions {
+        display: flex;
+        gap: 12px;
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 4px;
+      }
+
+      .win-btn {
+        appearance: none;
+        border: 0;
+        cursor: pointer;
+        padding: 14px 18px;
+        border-radius: 999px;
+        font-weight: 1000;
+        font-size: 1.1rem;
+        transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+        color: #fff;
+        box-shadow: 0 16px 50px rgba(99, 102, 241, 0.22);
+      }
+
+      .win-btn:active {
+        transform: translateY(-1px) scale(0.99);
+      }
+
+      .win-btn:focus-visible {
+        outline: 4px solid var(--focus);
+        outline-offset: 4px;
+      }
+
+      .win-btn-primary {
+        background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      }
+
+      .win-btn-secondary {
+        background: linear-gradient(135deg, #34d399, #60a5fa);
+      }
+
+      .card-emoji::after {
+        content: "";
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0));
+        opacity: 0.9;
+      }
+
+      .meta-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 0 6px 8px;
+        flex-wrap: wrap;
+      }
+
+      .meta-stats {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.55);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+        font-weight: 900;
+      }
+
+      .stat-badge {
+        gap: 8px;
+      }
+
+      .best-badge {
+        background: rgba(255, 215, 0, 0.2);
+        border: 1px solid rgba(255, 215, 0, 0.4);
+      }
+
+      .best-badge small {
+        color: #b45309;
+      }
+
+      .stat-name {
+        font-weight: 950;
+      }
+
+      .settings-gear {
+        appearance: none;
+        border: 0;
+        cursor: pointer;
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.55);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+        font-size: 1.25rem;
+        font-weight: 950;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+      }
+
+      .settings-gear:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.1);
+        filter: saturate(1.06);
+      }
+
+      .settings-gear:active {
+        transform: translateY(-1px) scale(0.99);
+      }
+
+      .settings-gear:focus-visible {
+        outline: 4px solid var(--focus);
+        outline-offset: 4px;
+      }
+
+      .badge small {
+        font-weight: 900;
+        color: rgba(15, 23, 42, 0.7);
+      }
+
+      .tip {
+        color: rgba(15, 23, 42, 0.72);
+        font-weight: 800;
+        font-size: 0.98rem;
+        flex-basis: 100%;
+        text-align: center;
+      }
+
+      /* Settings modal */
+      .settings-overlay {
+        z-index: 1002;
+      }
+
+      .settings-row {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .range-wrap {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .range-top {
+        width: 100%;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 0 8px;
+      }
+
+      .range-top span {
+        font-weight: 950;
+        color: rgba(15, 23, 42, 0.85);
+      }
+
+      input[type="range"] {
+        width: min(420px, 90%);
+        accent-color: #8b5cf6;
+      }
+
+      /* Toggle switch styles */
+      .toggle-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        background: rgba(255, 255, 255, 0.45);
+        border-radius: 18px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        margin-top: 4px;
+      }
+
+      .toggle-label {
+        font-weight: 950;
+        color: rgba(15, 23, 42, 0.85);
+        font-size: 1.05rem;
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 54px;
+        height: 28px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background-color: #cbd5e1;
+        transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 34px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      input:checked + .slider {
+        background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(26px);
+      }
+
+      .modal-close {
+        width: 100%;
+        max-width: 260px;
+        margin: 6px auto 0;
+      }
+
+      @media (max-width: 520px) {
+        .grid {
+          gap: 10px;
+          padding: 4px;
+        }
+
+        .stage {
+          border-radius: 22px;
+          padding: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <header>
+        <div class="brand">
+          <h1 class="title">Flip Card Memory Game</h1>
+          <p class="subtitle" id="subtitle">Choose your topic to start playing.</p>
+        </div>
+        <button class="back" type="button" onclick="window.location.href='index.html'">Back</button>
+      </header>
+
+      <section class="stage" id="stage">
+        <div class="stage-inner">
+          <div class="meta-row">
+            <div class="badge">
+              <span id="topic-badge-emoji" aria-hidden="true">✨</span>
+              <div>
+                <div id="topic-badge-title">Topic</div>
+                <small id="topic-badge-sub">4x4 grid ready</small>
+              </div>
+            </div>
+            <div class="meta-stats" aria-label="Progress stats">
+              <div class="badge stat-badge best-badge" id="bestMovesBadge" style="display: none;">
+                <div>Best Moves</div>
+                <small id="bestMovesValue">-</small>
+              </div>
+              <div class="badge stat-badge best-badge" id="bestTimeBadge" style="display: none;">
+                <div>Best Time</div>
+                <small id="bestTimeValue">-</small>
+              </div>
+              <div class="badge stat-badge">
+                <div>Moves</div>
+                <small id="movesValue">0</small>
+              </div>
+              <div class="badge stat-badge">
+                <div>Time</div>
+                <small id="timeValue">00:00</small>
+              </div>
+              <button
+                class="settings-gear"
+                type="button"
+                id="settingsBtn"
+                aria-label="Settings"
+                title="Settings"
+              >
+                ⚙️
+              </button>
+            </div>
+            <div class="tip" id="tip">Find matching pairs!</div>
+          </div>
+
+          <div class="grid" id="grid" aria-label="Card grid"></div>
+        </div>
+      </section>
+    </main>
+
+    <div
+      class="modal-overlay"
+      id="modalOverlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+    >
+      <div class="modal" role="document">
+        <div class="modal-inner">
+          <h2 class="modal-title" id="modalTitle">Fun Fact!</h2>
+          <p class="modal-body" id="modalText">Matching pairs make your brain smile. Try to find more!</p>
+          <button class="modal-ok" type="button" id="modalOk">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal-overlay settings-overlay"
+      id="settingsOverlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settingsTitle"
+    >
+      <div class="modal" role="document">
+        <div class="modal-inner">
+          <h2 class="modal-title" id="settingsTitle">Settings</h2>
+          <div class="settings-row">
+            <div class="range-wrap">
+              <div class="range-top">
+                <span>Volume</span>
+                <span id="volumeValueText">70</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="70"
+                id="volumeRange"
+                aria-label="Volume"
+              />
+            </div>
+            <div class="toggle-row">
+              <span class="toggle-label">Show Fun Facts</span>
+              <label class="switch">
+                <input type="checkbox" id="showFunFactsToggle" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <button class="modal-ok modal-close" type="button" id="settingsCloseBtn">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="win-modal-overlay" id="winOverlay" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+      <div class="win-modal" role="document">
+        <div class="win-inner">
+          <h2 class="win-title" id="winTitle">You won! 🎉</h2>
+          <p class="win-sub" id="winSub">Great job! Want to play again?</p>
+          <div class="win-actions">
+            <button class="win-btn win-btn-primary" type="button" id="playAgainBtn">Play Again</button>
+            <button class="win-btn win-btn-secondary" type="button" id="goHomeBtn">Go Back Home</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const topicRaw = (params.get("topic") || "animals").toLowerCase();
+      const topic = ["animals", "fruits", "space"].includes(topicRaw) ? topicRaw : "animals";
+      const difficultyRaw = (params.get("difficulty") || "easy").toLowerCase();
+      const difficulty = ["easy", "medium", "hard"].includes(difficultyRaw) ? difficultyRaw : "easy";
+
+      const difficultyConfig = {
+        easy: { cols: 3, rows: 4, label: "Easy" },
+        medium: { cols: 4, rows: 5, label: "Medium" },
+        hard: { cols: 6, rows: 6, label: "Hard" },
+      };
+
+      const { cols, rows, label: difficultyLabel } = difficultyConfig[difficulty];
+
+      const topicConfig = {
+        animals: {
+          title: "Animals",
+          emoji: "🐾",
+          accents: [
+            "🐶",
+            "🐱",
+            "🦊",
+            "🐸",
+            "🦁",
+            "🐵",
+            "🐧",
+            "🦉",
+            "🐯",
+            "🐷",
+            "🐰",
+            "🐮",
+            "🐻",
+            "🦒",
+            "🐘",
+            "🐙",
+            "🦈",
+            "🐬",
+          ],
+        },
+        fruits: {
+          title: "Fruits",
+          emoji: "🍎",
+          accents: ["🍎", "🍊", "🍋", "🍌", "🍉", "🍓"],
+        },
+        space: {
+          title: "Space",
+          emoji: "🚀",
+          accents: [
+            "🚀",
+            "🛸",
+            "🪐",
+            "🌙",
+            "⭐️",
+            "🌠",
+            "🌍",
+            "🌕",
+            "🌑",
+            "☄️",
+            "🌌",
+            "🔭",
+            "👽",
+            "👨‍🚀",
+            "👩‍🚀",
+            "👨‍🚀",
+            "🛰️",
+            "🌟",
+          ],
+        },
+      };
+
+      const cfg = topicConfig[topic];
+      document.body.classList.add(`topic-${topic}`);
+
+      document.getElementById("subtitle").textContent = `Topic: ${cfg.title} · ${difficultyLabel}`;
+      document.getElementById("topic-badge-title").textContent = cfg.title;
+      document.getElementById("topic-badge-emoji").textContent = cfg.emoji;
+      document.getElementById("topic-badge-sub").textContent = `${cols}x${rows} grid ready`;
+
+      const modalTextEl = document.getElementById("modalText");
+
+      // Create a difficulty-based grid. Each selected icon repeats as a pair.
+      const grid = document.getElementById("grid");
+      grid.style.setProperty("--cols", String(cols));
+
+      const totalCards = cols * rows;
+      const requiredPairs = totalCards / 2;
+
+      // 1. Shuffle all available icons to randomize the selection pool.
+      const availableIcons = cfg.accents.filter(icon => icon && icon.trim() !== "");
+      for (let i = availableIcons.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [availableIcons[i], availableIcons[j]] = [availableIcons[j], availableIcons[i]];
+      }
+
+      // 2. Pick the required number of unique icons for the pairs.
+      const uniqueIcons = availableIcons.slice(0, requiredPairs);
+
+      // 3. Force-create pairs by duplicating the unique icons array.
+      const pairedIcons = [...uniqueIcons, ...uniqueIcons];
+
+      // 4. Final shuffle of the paired deck.
+      for (let i = pairedIcons.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pairedIcons[i], pairedIcons[j]] = [pairedIcons[j], pairedIcons[i]];
+      }
+
+      // 5. Build the deck with zero-null validation.
+      const deck = pairedIcons.map((icon, index) => {
+        if (!icon) {
+          throw new Error(`FATAL: Card at index ${index} has a null or empty icon.`);
+        }
+        // Find the original index to use as the pair ID.
+        const pairId = uniqueIcons.indexOf(icon);
+        return { icon, pair: pairId };
+      });
+
+      grid.innerHTML = deck
+        .map(
+          (c, idx) => `
+        <button class="card" type="button" data-pair="${c.pair}" aria-label="Card ${idx + 1}">
+          <div class="card-flip" aria-hidden="true">
+            <div class="card-face card-back">
+              <div class="card-back-mark">✦</div>
+            </div>
+            <div class="card-face card-front">
+              <div class="card-emoji">${c.icon}</div>
+            </div>
+          </div>
+        </button>
+      `
+        )
+        .join("");
+
+      const cards = Array.from(document.querySelectorAll(".card"));
+      const gridEl = document.getElementById("grid");
+      const tipEl = document.getElementById("tip");
+      const modalOverlayEl = document.getElementById("modalOverlay");
+      const modalOkBtn = document.getElementById("modalOk");
+      const settingsBtn = document.getElementById("settingsBtn");
+      const settingsOverlayEl = document.getElementById("settingsOverlay");
+      const settingsCloseBtn = document.getElementById("settingsCloseBtn");
+      const volumeRangeEl = document.getElementById("volumeRange");
+      const volumeValueTextEl = document.getElementById("volumeValueText");
+      const showFunFactsToggle = document.getElementById("showFunFactsToggle");
+      const winOverlayEl = document.getElementById("winOverlay");
+      const playAgainBtn = document.getElementById("playAgainBtn");
+      const goHomeBtn = document.getElementById("goHomeBtn");
+
+      let firstCard = null;
+      let secondCard = null;
+      let isResolving = false;
+      let isModalOpen = false;
+      const FLIP_MS = 460; // Keep in sync with CSS transition for card flip.
+      let pendingWin = false;
+
+      const movesValueEl = document.getElementById("movesValue");
+      const timeValueEl = document.getElementById("timeValue");
+      const winSubEl = document.getElementById("winSub");
+
+      // Progress tracking
+      let movesCount = 0; // One move = flipping two cards.
+      let timerRunning = false;
+      let timerStopped = false;
+      let timerStartStamp = 0; // performance.now()
+      let timerAccumulatedMs = 0;
+      let timerIntervalId = null;
+      let finalTimeStr = "00:00";
+
+      // Volume control (0-100).
+      let volumePercent = 70;
+      const VOLUME_STORAGE_KEY = "flip_card_memory_game_volume";
+      const FUN_FACTS_STORAGE_KEY = "flip_card_memory_game_show_fun_facts";
+      const RECORD_MOVES_KEY = `flip_card_record_moves_${difficulty}`;
+      const RECORD_TIME_KEY = `flip_card_record_time_${difficulty}`;
+
+      let showFunFacts = true;
+
+      function loadRecords() {
+        const bestMoves = localStorage.getItem(RECORD_MOVES_KEY);
+        const bestTimeMs = localStorage.getItem(RECORD_TIME_KEY);
+        if (bestMoves) {
+          document.getElementById("bestMovesValue").textContent = bestMoves;
+          document.getElementById("bestMovesBadge").style.display = "inline-flex";
+        }
+        if (bestTimeMs) {
+          document.getElementById("bestTimeValue").textContent = formatTime(Number(bestTimeMs));
+          document.getElementById("bestTimeBadge").style.display = "inline-flex";
+        }
+      }
+
+      function updateRecords() {
+        const currentMoves = movesCount;
+        const currentTimeMs = timerAccumulatedMs;
+        let isNewMovesRecord = false;
+        let isNewTimeRecord = false;
+
+        const bestMoves = localStorage.getItem(RECORD_MOVES_KEY);
+        if (!bestMoves || currentMoves < Number(bestMoves)) {
+          localStorage.setItem(RECORD_MOVES_KEY, currentMoves);
+          isNewMovesRecord = true;
+        }
+
+        const bestTimeMs = localStorage.getItem(RECORD_TIME_KEY);
+        if (!bestTimeMs || currentTimeMs < Number(bestTimeMs)) {
+          localStorage.setItem(RECORD_TIME_KEY, currentTimeMs);
+          isNewTimeRecord = true;
+        }
+        return { isNewMovesRecord, isNewTimeRecord };
+      }
+
+      loadRecords();
+
+      // Sound effects (generated with Web Audio; no external files needed).
+      let audioCtx = null;
+      let noiseBuffer = null;
+      let winShown = false;
+
+      function ensureAudio() {
+        if (audioCtx) return audioCtx;
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        audioCtx = new Ctx();
+        return audioCtx;
+      }
+
+      function getNoiseBuffer(ctx) {
+        if (noiseBuffer) return noiseBuffer;
+        const bufferSize = ctx.sampleRate * 0.2; // 200ms buffer
+        noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        return noiseBuffer;
+      }
+
+      function playTone({
+        freqs = [440],
+        durMs = 120,
+        type = "sine",
+        gain = 0.08,
+        glide = 0,
+      } = {}) {
+        const vol = Math.max(0, Math.min(1, volumePercent / 100));
+        if (vol <= 0) return;
+        const ctx = ensureAudio();
+        if (!ctx) return;
+        const t0 = ctx.currentTime;
+        const end = t0 + durMs / 1000;
+
+        const endGain = Math.max(0.0001, gain * vol);
+
+        const master = ctx.createGain();
+        master.gain.setValueAtTime(0.0001, t0);
+        master.gain.exponentialRampToValueAtTime(endGain, t0 + 0.01);
+        master.gain.exponentialRampToValueAtTime(0.0001, end);
+        master.connect(ctx.destination);
+
+        freqs.forEach((f, i) => {
+          const osc = ctx.createOscillator();
+          osc.type = type;
+          const start = t0 + i * 0.03;
+          const stop = Math.min(end, start + durMs / 1000);
+          osc.frequency.setValueAtTime(f, start);
+          if (glide) osc.frequency.linearRampToValueAtTime(f * glide, stop);
+          osc.connect(master);
+          osc.start(start);
+          osc.stop(stop);
+        });
+      }
+
+      function playSuccessSound() {
+        // Cheerful 3-note chime.
+        playTone({ freqs: [523.25, 659.25, 783.99], durMs: 190, type: "triangle", gain: 0.06 });
+      }
+
+      function playWrongSound() {
+        // Short "boop" using a descending tone.
+        playTone({ freqs: [330, 246.94], durMs: 140, type: "square", gain: 0.05, glide: 0.75 });
+      }
+
+      function playClap(ctx, atTime) {
+        const vol = Math.max(0, Math.min(1, volumePercent / 100));
+        if (vol <= 0) return;
+        const source = ctx.createBufferSource();
+        source.buffer = getNoiseBuffer(ctx);
+
+        const hp = ctx.createBiquadFilter();
+        hp.type = "highpass";
+        hp.frequency.setValueAtTime(700, atTime);
+
+        const bp = ctx.createBiquadFilter();
+        bp.type = "bandpass";
+        bp.frequency.setValueAtTime(1400, atTime);
+        bp.Q.setValueAtTime(0.7, atTime);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, atTime);
+        g.gain.exponentialRampToValueAtTime(Math.max(0.0001, 0.25 * vol), atTime + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.12);
+
+        source.connect(hp);
+        hp.connect(bp);
+        bp.connect(g);
+        g.connect(ctx.destination);
+
+        source.start(atTime);
+        source.stop(atTime + 0.14);
+      }
+
+      function playWinApplause() {
+        const vol = Math.max(0, Math.min(1, volumePercent / 100));
+        if (vol <= 0) return;
+        const ctx = ensureAudio();
+        if (!ctx) return;
+        const base = ctx.currentTime + 0.02;
+        const claps = [0, 0.14, 0.28, 0.34, 0.48, 0.62];
+        claps.forEach((dt, i) => playClap(ctx, base + dt + i * 0.01));
+        // Add a gentle upward "sparkle".
+        playTone({ freqs: [659.25, 880, 1046.5], durMs: 260, type: "sine", gain: 0.04 });
+      }
+
+      function formatTime(ms) {
+        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+        const mm = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+        const ss = String(totalSeconds % 60).padStart(2, "0");
+        return `${mm}:${ss}`;
+      }
+
+      function getElapsedMs() {
+        if (timerStopped) return timerAccumulatedMs;
+        if (!timerRunning) return timerAccumulatedMs;
+        return timerAccumulatedMs + (performance.now() - timerStartStamp);
+      }
+
+      function startTimer() {
+        if (timerRunning || timerStopped) return;
+        timerRunning = true;
+        timerStartStamp = performance.now();
+        timerIntervalId = window.setInterval(() => {
+          timeValueEl.textContent = formatTime(getElapsedMs());
+        }, 200);
+      }
+
+      function pauseTimer() {
+        if (!timerRunning || timerStopped) return;
+        timerAccumulatedMs += performance.now() - timerStartStamp;
+        timerRunning = false;
+      }
+
+      function resumeTimer() {
+        if (timerStopped || timerRunning) return;
+        timerRunning = true;
+        timerStartStamp = performance.now();
+      }
+
+      function stopTimer() {
+        if (timerStopped) return;
+        timerAccumulatedMs = getElapsedMs();
+        timerRunning = false;
+        timerStopped = true;
+        finalTimeStr = formatTime(timerAccumulatedMs);
+        timeValueEl.textContent = finalTimeStr;
+        if (timerIntervalId) {
+          window.clearInterval(timerIntervalId);
+          timerIntervalId = null;
+        }
+      }
+
+      movesValueEl.textContent = String(movesCount);
+      timeValueEl.textContent = "00:00";
+      startTimer();
+
+      // Initialize volume from slider UI.
+      if (volumeRangeEl) {
+        const saved = Number(window.localStorage.getItem(VOLUME_STORAGE_KEY));
+        const initial = Number.isFinite(saved) ? saved : Number(volumeRangeEl.value || 70);
+        volumePercent = Math.max(0, Math.min(100, Math.round(initial)));
+        volumeRangeEl.value = String(volumePercent);
+        volumeValueTextEl.textContent = String(volumePercent);
+
+        volumeRangeEl.addEventListener("input", () => {
+          volumePercent = Math.max(0, Math.min(100, Number(volumeRangeEl.value) || 0));
+          volumeValueTextEl.textContent = String(volumePercent);
+          window.localStorage.setItem(VOLUME_STORAGE_KEY, String(volumePercent));
+        });
+
+        const savedFunFacts = window.localStorage.getItem(FUN_FACTS_STORAGE_KEY);
+        showFunFacts = savedFunFacts === null ? true : savedFunFacts === "true";
+        showFunFactsToggle.checked = showFunFacts;
+
+        showFunFactsToggle.addEventListener("change", () => {
+          showFunFacts = showFunFactsToggle.checked;
+          window.localStorage.setItem(FUN_FACTS_STORAGE_KEY, String(showFunFacts));
+        });
+      }
+
+      function showSettingsModal() {
+        if (isModalOpen) return;
+        isModalOpen = true;
+        pauseTimer();
+        lockInteraction(true);
+        settingsOverlayEl.classList.add("is-open");
+        settingsCloseBtn.focus();
+      }
+
+      function hideSettingsModal() {
+        settingsOverlayEl.classList.remove("is-open");
+        isModalOpen = false;
+        lockInteraction(false);
+        if (!timerStopped) resumeTimer();
+      }
+
+      settingsBtn.addEventListener("click", () => showSettingsModal());
+      settingsCloseBtn.addEventListener("click", () => hideSettingsModal());
+
+      // Close on Escape for convenience.
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && settingsOverlayEl.classList.contains("is-open")) {
+          hideSettingsModal();
+        }
+      });
+
+      const factsByTopic = {
+        animals: [
+          "Some animals can change color to hide or communicate!",
+          "Dolphins have names for each other and use clicks and whistles.",
+          "Bees can 'see' ultraviolet patterns on flowers.",
+          "Octopuses have three hearts and blue blood.",
+          "Penguins huddle together to stay warm.",
+          "Bats use echolocation to find insects in the dark.",
+          "Frogs can absorb water through their skin.",
+          "Cheetahs are the fastest land animals.",
+          "Turtles can breathe in surprising ways!",
+          "Owls can turn their heads far to spot tiny movements.",
+          "Crows can remember human faces and recognize them later.",
+          "Flamingos eat with their heads upside down—it's how they filter food.",
+          "Many snakes can smell using their forked tongue and scent receptors.",
+          "Wolves communicate with howls to share information with their pack.",
+          "Sloths move slowly to save energy and avoid overheating.",
+          "Starfish can regrow lost arms—and sometimes even a whole body part.",
+          "Tigers have stripe patterns unique to each individual, like fingerprints.",
+          "The peregrine falcon is one of the fastest animals on Earth in a dive.",
+        ],
+        fruits: [
+          "Bananas grow in bunches, and each fruit is actually from one flower.",
+          "Strawberries aren’t true berries—each 'seed' is a tiny fruit!",
+          "Apples can float because they trap air inside.",
+          "Mangoes are related to cashews and pistachios!",
+          "Watermelons are super refreshing because they’re mostly water.",
+          "Kiwi fruit has tiny edible seeds and a bright green center.",
+          "Oranges are famous for vitamin C.",
+          "Pineapples have tough skin, but their inside is sweet and juicy.",
+          "Cherries can be different colors, like red or yellow.",
+          "Pomegranates have lots of juice-filled seeds called arils.",
+          "Pears often ripen after picking, so they may feel firm at first.",
+          "Raspberries are made of many tiny fruits stuck together.",
+          "Coconut water starts as the young fruit’s liquid before it becomes flesh.",
+          "Papayas contain an enzyme called papain that helps break down proteins.",
+          "Figs are special because their 'fruit' is actually an internal structure.",
+          "Avocados have a large pit and are technically a single-seed fruit.",
+          "Tomatoes are botanically fruits, even though we use them like vegetables.",
+          "Grapes can become raisins when dried out and sugar becomes concentrated.",
+        ],
+        space: [
+          "A day on Mercury is longer than its year!",
+          "Jupiter is so big that Earth could fit inside it many times.",
+          "Mars has Olympus Mons—the tallest volcano in the solar system.",
+          "Saturn’s rings are made of ice and rock pieces.",
+          "The Moon can have 'moonquakes' like Earth has earthquakes.",
+          "Neptune is the farthest planet from the Sun.",
+          "A light-year measures distance, not time.",
+          "Stars twinkle because Earth’s air bends their light.",
+          "Astronauts can grow taller in space due to lower gravity.",
+          "The International Space Station circles Earth about every 90 minutes.",
+          "The Sun holds about 99.8% of the solar system’s mass.",
+          "A black hole is an area where gravity is so strong that not even light escapes.",
+          "Light travels at roughly 300,000 km per second (about 186,000 miles/s).",
+          "Venus rotates very slowly and spins in the opposite direction of most planets.",
+          "Neutron stars are incredibly dense—imagine the mass of the Sun in a city-sized ball.",
+          "Supernovas are huge explosions caused by massive stars nearing the end of their lives.",
+          "The Milky Way has billions of stars, and many are still forming.",
+          "Earth’s atmosphere protects us by burning up most tiny incoming space debris.",
+        ],
+      };
+
+      function shuffleArray(arr) {
+        const a = arr.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      // Ensure each match shows a new fact during this playthrough.
+      let funFactsQueue = shuffleArray(factsByTopic[topic] || []);
+
+      function getNextFact() {
+        if (!funFactsQueue.length) return "Keep going—your brain is doing great!";
+        return funFactsQueue.shift();
+      }
+
+      function flipCard(card) {
+        card.classList.add("is-flipped");
+      }
+
+      function unflipCard(card) {
+        card.classList.remove("is-flipped");
+      }
+
+      function lockInteraction(lock) {
+        isResolving = lock;
+        if (lock) gridEl.classList.add("is-locked");
+        else gridEl.classList.remove("is-locked");
+      }
+
+      function endRoundIfMatched() {
+        const matched = document.querySelectorAll(".card.is-matched").length;
+        if (matched === cards.length) {
+          tipEl.textContent = "You did it! 🎉";
+        }
+      }
+
+      function showFunFactModal() {
+        if (isModalOpen) return;
+        isModalOpen = true;
+        // Pause timer whenever the Fun Fact modal is open.
+        pauseTimer();
+        modalTextEl.textContent = getNextFact();
+        lockInteraction(true);
+        modalOverlayEl.classList.add("is-open");
+        // Small accessibility boost: focus the OK button.
+        modalOkBtn.focus();
+      }
+
+      function showWinModal() {
+        if (winShown) return;
+        winShown = true;
+
+        const { isNewMovesRecord, isNewTimeRecord } = updateRecords();
+        loadRecords();
+
+        // Winning modal means the whole board must be paused.
+        isModalOpen = true;
+        lockInteraction(true);
+        modalOverlayEl.classList.remove("is-open");
+
+        let winMsg = `You finished in ${movesCount} moves with ${finalTimeStr}.`;
+        if (isNewMovesRecord && isNewTimeRecord) {
+          winMsg += "<br><strong>New Personal Best in both Moves and Time! 🏆</strong>";
+        } else if (isNewMovesRecord) {
+          winMsg += "<br><strong>New Personal Best in Moves! 🎖️</strong>";
+        } else if (isNewTimeRecord) {
+          winMsg += "<br><strong>New Personal Best in Time! ⚡</strong>";
+        }
+
+        winSubEl.innerHTML = winMsg;
+        winOverlayEl.classList.add("is-open");
+        playWinApplause();
+        playAgainBtn.focus();
+      }
+
+      function closeFunFactModal() {
+        modalOverlayEl.classList.remove("is-open");
+        if (pendingWin) {
+          pendingWin = false;
+          showWinModal();
+          return;
+        }
+        isModalOpen = false;
+        lockInteraction(false);
+        // Resume timer only if the game is still running.
+        if (!timerStopped) resumeTimer();
+      }
+
+      modalOkBtn.addEventListener("click", () => closeFunFactModal());
+
+      playAgainBtn.addEventListener("click", () => {
+        // Reload guarantees we reset deck, matched state, and fact queue.
+        window.location.reload();
+      });
+
+      goHomeBtn.addEventListener("click", () => {
+        window.location.href = "index.html";
+      });
+
+      cards.forEach((card) => {
+        card.addEventListener("click", () => {
+          if (volumePercent > 0) ensureAudio(); // enable audio after user gesture
+          if (isResolving || isModalOpen) return;
+          if (card.classList.contains("is-matched")) return;
+          if (card.classList.contains("is-flipped")) return;
+
+          flipCard(card);
+
+          if (!firstCard) {
+            firstCard = card;
+            tipEl.textContent = "Good choice! Pick one more card.";
+            return;
+          }
+
+          // This is the second card.
+          secondCard = card;
+          // One move = flipping two cards.
+          movesCount += 1;
+          movesValueEl.textContent = String(movesCount);
+          const firstPair = firstCard.getAttribute("data-pair");
+          const secondPair = secondCard.getAttribute("data-pair");
+
+          lockInteraction(true);
+
+          if (firstPair === secondPair) {
+            firstCard.classList.add("is-matched");
+            secondCard.classList.add("is-matched");
+
+            tipEl.textContent = "Match! Keep going.";
+            playSuccessSound();
+
+            // If this match completes the last pair, stop the timer immediately.
+            const isWinNow =
+              document.querySelectorAll(".card.is-matched").length === cards.length;
+            if (isWinNow) {
+              pendingWin = true;
+              stopTimer();
+            } else {
+              pendingWin = false;
+            }
+
+            // Wait for the flip animation so we never briefly show >2 face-up cards.
+            setTimeout(() => {
+              firstCard = null;
+              secondCard = null;
+              if (showFunFacts) {
+                showFunFactModal();
+              } else if (pendingWin) {
+                pendingWin = false;
+                showWinModal();
+              } else {
+                lockInteraction(false);
+              }
+            }, FLIP_MS);
+            return;
+          }
+
+          // Not a match: flip back after a short delay.
+          tipEl.textContent = "Not a match. Try again!";
+          playWrongSound();
+          setTimeout(() => {
+            unflipCard(firstCard);
+            unflipCard(secondCard);
+            firstCard = null;
+            secondCard = null;
+            // Keep locked until the flip-back animation finishes.
+            setTimeout(() => lockInteraction(false), FLIP_MS);
+          }, 1000);
+        });
+      });
+    </script>
+  </body>
+</html>
+
