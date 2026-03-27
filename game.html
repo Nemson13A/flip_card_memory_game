@@ -149,8 +149,8 @@
         overflow: hidden;
         background: transparent;
         perspective: 900px;
-        /* Responsive card scaling - slightly smaller to fit 4x5/6x6 */
-        max-width: 100px;
+        /* Responsive card scaling - dynamically set by JS */
+        max-width: var(--card-size, 100px);
       }
 
       .card-flip {
@@ -810,8 +810,8 @@
       const difficulty = ["easy", "medium", "hard"].includes(difficultyRaw) ? difficultyRaw : "easy";
 
       const difficultyConfig = {
-        easy: { cols: 4, rows: 3, label: "Easy" },
-        medium: { cols: 5, rows: 4, label: "Medium" },
+        easy: { cols: 3, rows: 4, label: "Easy" },
+        medium: { cols: 4, rows: 5, label: "Medium" },
         hard: { cols: 6, rows: 6, label: "Hard" },
       };
 
@@ -855,13 +855,23 @@
       // Setup grid layout based on difficulty
       const grid = document.getElementById("grid");
       
-      function updateGridStyle(columns) {
+      function updateGridStyle(rows, cols) {
         if (!grid) return;
-        // Direct style manipulation with !important
-        grid.style.setProperty('grid-template-columns', `repeat(${columns}, 1fr)`, 'important');
+        // 核心修复：动态设置列数，直接操作 Style 属性
+        grid.style.setProperty('grid-template-columns', `repeat(${cols}, 1fr)`, 'important');
+
+        // 根据卡片数量动态调整卡片大小，防止超出屏幕
+        const totalCards = rows * cols;
+        let cardSize = "100px";
+        if (totalCards > 20) cardSize = "70px";
+        if (totalCards > 12) {
+          grid.style.setProperty('gap', '10px', 'important');
+        }
+        
+        grid.style.setProperty("--card-size", cardSize);
       }
 
-      updateGridStyle(cols);
+      updateGridStyle(rows, cols);
 
       const modalTextEl = document.getElementById("modalText");
 
