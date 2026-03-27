@@ -211,16 +211,16 @@
         transform: rotateY(180deg);
         display: grid;
         place-items: center;
-        padding: 10px;
+        padding: 4px; /* 减小内边距 */
       }
 
       .card-emoji {
-        width: 72%;
-        height: 72%;
+        width: 85%; /* 增加占比 */
+        height: 85%;
         border-radius: 22px;
         display: grid;
         place-items: center;
-        font-size: clamp(1.8rem, 4vw, 2.8rem);
+        font-size: var(--emoji-size, 2.5rem); /* 使用动态字号 */
         background: rgba(255, 255, 255, 0.35);
         box-shadow: 0 14px 26px rgba(0, 0, 0, 0.07);
         border: 2px solid rgba(255, 255, 255, 0.35);
@@ -860,15 +860,31 @@
         // 核心修复：动态设置列数，直接操作 Style 属性
         grid.style.setProperty('grid-template-columns', `repeat(${cols}, 1fr)`, 'important');
 
-        // 根据卡片数量动态调整卡片大小，防止超出屏幕
+        // 根据卡片数量动态调整卡片大小和图标字号
         const totalCards = rows * cols;
         let cardSize = "100px";
-        if (totalCards > 20) cardSize = "70px";
+        let emojiSize = "2.5rem";
+
+        if (totalCards <= 12) {
+          // Easy (3x4)
+          cardSize = "120px";
+          emojiSize = "3.8rem";
+        } else if (totalCards <= 20) {
+          // Medium (4x5)
+          cardSize = "95px";
+          emojiSize = "2.8rem";
+        } else {
+          // Hard (6x6)
+          cardSize = "75px";
+          emojiSize = "2rem";
+        }
+
         if (totalCards > 12) {
           grid.style.setProperty('gap', '10px', 'important');
         }
         
         grid.style.setProperty("--card-size", cardSize);
+        grid.style.setProperty("--emoji-size", emojiSize);
       }
 
       updateGridStyle(rows, cols);
