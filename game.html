@@ -828,7 +828,8 @@
           accents: [
             "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯",
             "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦", "🦆", "🦉",
-            "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🪱", "🐛", "🦋", "🐌"
+            "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🦋", "🐌", "🐞", "🐢",
+            "🐙", "🦑", "🦐", "🦞", "🦀", "🐡", "🐠", "🐟", "🐬", "🐳"
           ],
         },
         fruits: {
@@ -836,8 +837,8 @@
           emoji: "🍎",
           accents: [
             "🍎", "🍊", "🍋", "🍌", "🍉", "🍓", "🍒", "🍑", "🍍", "🥥",
-            "🥝", "🍇", "🍐", "🍏", "🍈", "🫐", "🥭", "🍅", "🥦", "🌽",
-            "🥕", "🫑", "🧅", "🧄", "🫒", "🍆", "🥔", "🥜", "🌰", "🍞"
+            "🥝", "🍇", "🍐", "🍏", "🍈", "🫐", "🥭", "🍅", "🥑", "🍆",
+            "🍇", "🍈", "🍉", "🍊", "🍋", "🍌", "🍍", "🥭", "🍎", "🍏"
           ],
         },
         space: {
@@ -845,8 +846,8 @@
           emoji: "🚀",
           accents: [
             "🚀", "🛸", "🪐", "🌙", "⭐️", "🌠", "🌍", "🌕", "🌑", "☄️",
-            "🌌", "🔭", "👽", "👨‍🚀", "👩‍🚀", "🛰️", "🌟", "☀️", "🔭", "👽",
-            "🛸", "🪐", "🛰️", "🛸", "👾", "🤖", "🤖", "👾", "👽", "🛸"
+            "🌌", "🔭", "👽", "👨‍🚀", "👩‍🚀", "🛰️", "🌟", "☀️", "👾", "🤖",
+            "📡", "🔭", "☄️", "🌑", "🌌", "🌍", "🪐", "🚀", "🛸", "🪐"
           ],
         },
       };
@@ -905,32 +906,34 @@
       const totalCards = cols * rows;
       const requiredPairs = totalCards / 2;
 
-      // 1. Shuffle all available icons to randomize the selection pool.
-      const availableIcons = cfg.accents.filter(icon => icon && icon.trim() !== "");
-      for (let i = availableIcons.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [availableIcons[i], availableIcons[j]] = [availableIcons[j], availableIcons[i]];
+      // 1. 获取对应分类的所有图标并去重
+      let uniquePool = [...new Set(cfg.accents.filter(icon => icon && icon.trim() !== ""))];
+
+      // 2. 随机打乱池子，以便抽取随机的 N 个图标
+      uniquePool.sort(() => Math.random() - 0.5);
+
+      // 3. 严格抽取 N 个不重复的图标 (N = requiredPairs)
+      // 如果池子不够，则通过添加备用 Emoji 确保不超界
+      if (uniquePool.length < requiredPairs) {
+        const fallbackEmojis = ["🌈", "💎", "🔥", "🍀", "🎨", "🎭", "🎪", "🎫", "🏆", "🥇"];
+        uniquePool = [...uniquePool, ...fallbackEmojis].slice(0, requiredPairs);
       }
+      
+      const selectedIcons = uniquePool.slice(0, requiredPairs);
 
-      // 2. Pick the required number of unique icons for the pairs.
-      const uniqueIcons = availableIcons.slice(0, requiredPairs);
+      // 4. 将这 N 个图标各复制一份，组成 2N 张牌的数组
+      const pairedIcons = [...selectedIcons, ...selectedIcons];
 
-      // 3. Force-create pairs by duplicating the unique icons array.
-      const pairedIcons = [...uniqueIcons, ...uniqueIcons];
-
-      // 4. Final shuffle of the paired deck.
+      // 5. 使用 Math.random 彻底打乱这组牌
       for (let i = pairedIcons.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [pairedIcons[i], pairedIcons[j]] = [pairedIcons[j], pairedIcons[i]];
       }
 
-      // 5. Build the deck with zero-null validation.
+      // 6. 构建卡片对象，确保每个图标都有唯一的对子 ID
       const deck = pairedIcons.map((icon, index) => {
-        if (!icon) {
-          throw new Error(`FATAL: Card at index ${index} has a null or empty icon.`);
-        }
-        // Find the original index to use as the pair ID.
-        const pairId = uniqueIcons.indexOf(icon);
+        // pairId 使用该图标在 selectedIcons 中的索引，确保成对匹配
+        const pairId = selectedIcons.indexOf(icon);
         return { icon, pair: pairId };
       });
 
