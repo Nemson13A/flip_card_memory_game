@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flip-card-memory-game-v1';
+const CACHE_NAME = 'flip-card-memory-game-v2';
 const urlsToCache = [
   'index.html',
   'game.html',
